@@ -1,0 +1,5 @@
+{
+  "name": "¿Quién Compite Ahora?",
+  "description": "Una aplicación para ver los horarios de competición de un evento de CrossFit. Permite filtrar por hora, atleta, categoría o equipo y muestra mensajes motivacionales.",
+  "requestFramePermissions": []
+}
