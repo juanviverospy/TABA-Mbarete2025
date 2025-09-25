@@ -91,7 +91,18 @@ export const parseCSV = (csv: string): Row[] => {
 
 export const nombreResumen = (r: Row | null): string => {
   if (!r) return "";
-  return r.companero ? `${r.atleta} y ${r.companero}` : r.atleta;
+
+  // Determinar si es una categoría de duplas
+  const isDupla = r.categoria?.toUpperCase().includes('DUPLA');
+
+  if (isDupla) {
+    // Para duplas, unir nombres con "y"
+    return r.companero ? `${r.atleta} y ${r.companero}` : r.atleta;
+  } else {
+    // Para atletas individuales, el CSV usa 'atleta' para nombre y 'companero' para apellido.
+    // Unirlos con un espacio.
+    return r.companero ? `${r.atleta} ${r.companero}` : r.atleta;
+  }
 };
 
 export const proximoLuegoDe = (rows: Row[], hhmm: string): Row | null => {

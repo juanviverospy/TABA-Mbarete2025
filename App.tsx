@@ -3,16 +3,59 @@ import type { Row } from './types';
 import { CSV_EJEMPLO, parseCSV, toMinutes, nowHHMM } from './utils';
 import { AdminPanel, CompetitionCard, Card, SectionTitle, NoResults, Header } from './components';
 
+const FILTERS_STORAGE_KEY = 'quienCompiteAhora-filters';
+
+const getInitialFilters = () => {
+  try {
+    const item = window.localStorage.getItem(FILTERS_STORAGE_KEY);
+    const parsed = item ? JSON.parse(item) : {};
+    return {
+        time: parsed.time || "",
+        rangeMins: parsed.rangeMins ?? 10,
+        needle: parsed.needle || "",
+        selectedEntrada: parsed.selectedEntrada || "",
+        selectedAthlete: parsed.selectedAthlete || "",
+    };
+  } catch (error) {
+    console.warn(`Error reading filters from localStorage:`, error);
+    return {
+        time: "",
+        rangeMins: 10,
+        needle: "",
+        selectedEntrada: "",
+        selectedAthlete: "",
+    };
+  }
+};
+
 export default function App() {
   const [rows, setRows] = useState<Row[]>([]);
   const [csv, setCsv] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const [time, setTime] = useState<string>("");
-  const [rangeMins, setRangeMins] = useState<number>(10);
-  const [needle, setNeedle] = useState<string>("");
-  const [selectedEntrada, setSelectedEntrada] = useState<string>("");
-  const [selectedAthlete, setSelectedAthlete] = useState<string>("");
+  const initialFilters = useMemo(() => getInitialFilters(), []);
+
+  const [time, setTime] = useState<string>(initialFilters.time);
+  const [rangeMins, setRangeMins] = useState<number>(initialFilters.rangeMins);
+  const [needle, setNeedle] = useState<string>(initialFilters.needle);
+  const [selectedEntrada, setSelectedEntrada] = useState<string>(initialFilters.selectedEntrada);
+  const [selectedAthlete, setSelectedAthlete] = useState<string>(initialFilters.selectedAthlete);
+
+  // Effect to save filters to localStorage whenever they change
+  useEffect(() => {
+    const filtersToSave = {
+      time,
+      rangeMins,
+      needle,
+      selectedEntrada,
+      selectedAthlete,
+    };
+    try {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filtersToSave));
+    } catch (error) {
+      console.error("Failed to save filters to localStorage:", error);
+    }
+  }, [time, rangeMins, needle, selectedEntrada, selectedAthlete]);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -69,9 +112,19 @@ export default function App() {
   const athletesAndTeams = useMemo(() => {
     const names = new Set<string>();
     rows.forEach(r => {
-        if (r.atleta) names.add(r.atleta);
-        if (r.companero) names.add(r.companero);
-        if (r.dupla) names.add(r.dupla);
+        const isDupla = r.categoria?.toUpperCase().includes('DUPLA');
+        if (isDupla) {
+            // For teams, add the team name (`dupla`)
+            if (r.dupla) {
+                names.add(r.dupla.trim());
+            }
+        } else {
+            // For individuals, create the full name
+            const fullName = r.companero ? `${r.atleta} ${r.companero}`.trim() : r.atleta.trim();
+            if (fullName) {
+                names.add(fullName);
+            }
+        }
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [rows]);
@@ -94,11 +147,17 @@ export default function App() {
     }
 
     if (selectedAthlete) {
-      list = list.filter((r) =>
-        r.atleta === selectedAthlete ||
-        r.companero === selectedAthlete ||
-        r.dupla === selectedAthlete
-      );
+      list = list.filter((r) => {
+        const isDupla = r.categoria?.toUpperCase().includes('DUPLA');
+        if (isDupla) {
+            // For teams, match against the team name
+            return r.dupla === selectedAthlete;
+        } else {
+            // For individuals, match against the concatenated full name
+            const fullName = r.companero ? `${r.atleta} ${r.companero}` : r.atleta;
+            return fullName === selectedAthlete;
+        }
+      });
     } else if (time) {
       const t = toMinutes(time);
       if (!isNaN(t)) {

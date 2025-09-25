@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({ time, setTime, earliest, latest,
 // Component: CompetitionCard
 interface CompetitionCardProps { row: Row; }
 export const CompetitionCard: React.FC<CompetitionCardProps> = ({ row: r }) => {
-  const title = r.companero ? `${r.atleta} y ${r.companero}` : r.atleta;
+  const title = nombreResumen(r);
 
   return (
     <div className="rounded-2xl border border-neutral-700 p-3 bg-neutral-800 hover:border-yellow-400 hover:shadow-lg hover:shadow-yellow-400/5 transition-all duration-300">
